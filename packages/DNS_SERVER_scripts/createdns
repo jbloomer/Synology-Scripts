@@ -1,0 +1,49 @@
+#!/bin/env bash
+
+function help() {
+	echo "$(basename $0) \"DNS Zone\" \"Record Type\" \"DNS Entry\" \"IP Address\""
+	echo
+	echo -e "DNS ZONE:\t\tThis is the name of the DNS ZONE you wish to modify"
+	echo -e "RECORD TYPE:\t\tThis is the DNS record Type you want to create"
+	echo -e "\t\t\tA, AAAA, CNAME"
+	echo -e "DNS ENTRY:\t\tThis is the dns record you want to create"
+	echo -e "IP Address:\t\tWhere do you want this DNS record to point to"
+	echo
+}
+
+if [ -z $1 ] | [ -z $2 ] | [ -z $3 ] | [ -z $4 ]; then
+	help
+	exit 1
+fi
+
+ZONE=$1
+RECORDTYPE=$2
+ENTRY=$3
+IP=$4
+
+DNSBASEDIR='/var/packages/DNSServer/target'
+DNSSCRIPTSDIR="$DNSBASEDIR/script"
+DNSZONEDIR="$DNSBASEDIR/named/etc/zone/master"
+
+ls $DNSZONEDIR | grep $ZONE > /dev/null
+
+if [ "$?" != "0" ]; then
+	echo "ERROR: Invalid DNS Zone"
+	exit 1
+fi
+
+grep $ENTRY $DNSZONEDIR/$ZONE > /dev/null
+
+if [ "$?" != "0" ]; then
+	echo -e "$ENTRY.$ZONE.\t$RECORDTYPE\t$IP" >> $DNSZONEDIR/$ZONE
+	$DNSSCRIPTSDIR/reload.sh
+	exit 0
+else
+	sed -i "/$ENTRY/d" $DNSZONEDIR/$ZONE
+	echo -e "$ENTRY.$ZONE.\t$RECORDTYPE\t$IP" >> $DNSZONEDIR/$ZONE
+	$DNSSCRIPTSDIR/reload.sh
+	exit 0
+fi
+
+exit 0
+
